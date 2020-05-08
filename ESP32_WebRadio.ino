@@ -2,6 +2,9 @@
 // ESP32 WebRadio
 // 
 // Compile with DOIT ESP32 WebKit v1
+//
+// 0.0.1 - 08.05.2020 - First public release
+// 
       
 #define __DEBUG__
 
@@ -31,7 +34,7 @@ const char BUILD[] = __DATE__ " " __TIME__;
 Audio audio;
 
 // CJMCU-0401 Capacitive touch buttons
-const int BUTTON_PINS[4] = {34, 35, 33, 32};
+const int BUTTON_PINS[4] = {34, 35, 32, 33};
 
 // LCD PCD8544 - NOKIA 5110
 #include <SPI.h>
