@@ -13,9 +13,9 @@
 // ************************************
 bool loadConfigFile() {
   DynamicJsonDocument root(512);
-#ifdef __DEBUG__
-  Serial.println("[DEBUG] loadConfigFile()");
-#endif
+  
+  DEBUG_PRINT("[DEBUG] loadConfigFile()");
+  
   configFile = SPIFFS.open(CONFIG_FILE, "r");
   if (!configFile) {
     DEBUG_PRINT("[CONFIG] Config file not available");
@@ -32,7 +32,7 @@ bool loadConfigFile() {
       strlcpy(config.hostname, root["hostname"] | "aiq-sensor", sizeof(config.hostname));
       strlcpy(config.ntp_server, root["ntp_server"] | "time.ien.it", sizeof(config.ntp_server));
       config.ntp_timezone = root["ntp_timezone"] | 1;
-      strlcpy(config.stream_url, root["stream_url"] | "", sizeof(config.stream_url));
+      config.stream_id = root["stream_id"] | 0;
       config.volume = root["volume"] | 20;
       config.contrast = root["contrast"] | 50;
 
@@ -52,7 +52,7 @@ bool saveConfigFile() {
   root["hostname"] = config.hostname;
   root["ntp_server"] = config.ntp_server;
   root["ntp_timezone"] = config.ntp_timezone;
-  root["stream_url"] = config.stream_url;
+  root["stream_id"] = config.stream_id;
   root["volume"] = config.volume;
   root["contrast"] = config.contrast;
   
@@ -64,4 +64,64 @@ bool saveConfigFile() {
   serializeJson(root,configFile);
   configFile.close();
   return true;
+}
+
+// Debug function that return stream URLs list
+void printStreamsDB() {
+  DynamicJsonDocument doc(512);
+  
+  DEBUG_PRINT("[DEBUG] printStreamDB()");
+  
+  File dbFile = SPIFFS.open(DB_FILE, "r");
+  if (!dbFile) {
+    DEBUG_PRINT("[DB] DB file not found");
+    return;
+  }
+  
+  // Get the root object in the document
+  DeserializationError err = deserializeJson(doc, dbFile);
+  if (err) {
+    DEBUG_PRINT("[DB] Failed to read DB file:"+String(err.c_str()));
+    return;
+  }
+
+  JsonArray streams = doc["streams"];
+// streams[0] => "http://stream.dancewave.online:8080/dance.mp3"
+  
+  DEBUG_PRINT("DB memory usage:"+String(streams.memoryUsage())+" Bytes");
+
+  for(uint8_t i=0;i<streams.size();i++) {
+    DEBUG_PRINT(streams[i]);
+  }
+}
+
+bool getStreamURL(uint8_t id) {
+  DynamicJsonDocument doc(512);
+  
+  DEBUG_PRINT("[DEBUG] getStreamUrl("+String(id)+")");
+  
+  File dbFile = SPIFFS.open(DB_FILE, "r");
+  if (!dbFile) {
+    DEBUG_PRINT("[DB] DB file not found");
+    return false;
+  }
+  
+  // Get the root object in the document
+  DeserializationError err = deserializeJson(doc, dbFile);
+  if (err) {
+    DEBUG_PRINT("[DB] Failed to read DB file:"+String(err.c_str()));
+    return false;
+  }
+
+  JsonArray streams = doc["streams"];
+
+  config.stream_count = streams.size();
+
+  if(id < streams.size()) {
+    strncpy(config.stream_url,streams[id],64);
+    DEBUG_PRINT("[DB] Loaded "+String(config.stream_url));
+    return true;
+  } else {
+    return false;
+  }
 }

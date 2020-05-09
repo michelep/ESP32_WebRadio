@@ -5,7 +5,7 @@ ESP32 connect to the Internet via WiFI (support PSK/PSK2), fetching MP3/AAC audi
 
 ## Configuration
 
-Edit data/config.json file with your wifi ESSID and password. Other stuff can be edited via web interface, available after successfull contection to the net. 
+Edit data/config.json file with your wifi ESSID and password. Fill data/streams.json with your favourites streams. Then burn the whole data directory into SPIFFS partition. Other stuff can be edited via web interface, available after successfull contection to the net. 
 
 ## Bill of materials
 
@@ -17,3 +17,16 @@ Edit data/config.json file with your wifi ESSID and password. Other stuff can be
 
 ## Schematic
 ![Schematic](https://raw.githubusercontent.com/michelep/ESP32_WebRadio/master/images/schematic.png)
+
+## ChangeLog
+
+0.0.1 - 08.05.2020 
+  - First public release
+
+0.0.2 - 09.05.2020
+  - Added streams.json with lists of stream URL to be played
+  - Some minon bugs fixed
+
+## Contributions
+
+This work is free and far to be perfect nor complete. Contributions and PR are welcome and strongly encouraged!

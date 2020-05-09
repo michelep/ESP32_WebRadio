@@ -43,6 +43,9 @@ String templateProcessor(const String& var)
   if(var=="stream_url") {
     return String(config.stream_url);
   }
+  if(var=="stream_id") {
+    return String(config.stream_id);
+  }
   if(var=="volume") {
     return String(config.volume);
   }

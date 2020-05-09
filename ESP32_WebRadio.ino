@@ -3,15 +3,19 @@
 // 
 // Compile with DOIT ESP32 WebKit v1
 //
-// 0.0.1 - 08.05.2020 - First public release
-// 
+// 0.0.1 - 08.05.2020 
+//  - First public release
+//
+// 0.0.2 - 09.05.2020
+//  - Added streams.json with lists of stream URL to be played
+//  - Some minon bugs fixed
       
 #define __DEBUG__
 
 // Firmware data
 const char BUILD[] = __DATE__ " " __TIME__;
 #define FW_NAME         "esp32-webradio"
-#define FW_VERSION      "0.0.1"
+#define FW_VERSION      "0.0.2"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -91,6 +95,8 @@ struct Config {
   // Host config
   char hostname[16];
   // Radio podcast
+  int8_t stream_id;
+  int8_t stream_count;
   char stream_url[64];
   int8_t volume;
   // Display config
@@ -98,12 +104,15 @@ struct Config {
 };
 
 #define CONFIG_FILE "/config.json"
-
 File configFile;
 Config config; // Global config object
 
+// JSON file contains an array of streams URL
+#define DB_FILE "/streams.json"
+
 static int last; // millis counter
-bool streamChanged=true;
+bool streamIsValid = false;
+bool streamChanged = true;
 
 DynamicJsonDocument env(256);
   
@@ -164,6 +173,11 @@ bool connectToWifi() {
 //
 void audioTask(void *pvParameters) {
   while(1) {
+    if(streamChanged) {
+      playStream(config.stream_id);
+      streamChanged=false;
+    }
+
     audio.loop();  
   }
 }
@@ -229,14 +243,13 @@ void setup() {
 
   audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
   audio.setVolume(env["volume"].as<int>());
-  audio.connecttohost(config.stream_url);
-
-  // Set BOOL value to load and play stream...
-  streamChanged=true;
 
   pixels.begin();
   pixels.setBrightness(80);
   pixels.show(); // Initialize all pixels to 'off'
+
+  //
+  printStreamsDB();
 
   // let's fly!
   DEBUG_PRINT("[INIT] Ready: let's fly!");
@@ -244,7 +257,7 @@ void setup() {
 
   // Launch audioTask on CORE0 with high priority
   xTaskCreatePinnedToCore(
-                    audioTask,   /* Function to implement the task */
+                  audioTask,   /* Function to implement the task */
                     "audioTask", /* Name of the task */
                     10000,      /* Stack size in words */
                     NULL,       /* Task input parameter */
@@ -267,6 +280,16 @@ void updateDisplay() {
   display.display();
 }
 
+bool playStream(uint8_t stream_id) {
+  if(getStreamURL(stream_id)) {
+    audio.connecttohost(config.stream_url);
+    return true;
+  } 
+  DEBUG_PRINT("No STREAM URL defined!");
+  env["status"] = "No stream url defined!";  
+  return false;
+}
+
 void audio_info(const char *info){
     String sinfo=String(info);
     if(sinfo.startsWith("Bitrate=")) {
@@ -286,18 +309,14 @@ void audio_showstation(const char *info){
 uint8_t buttons=false;
 
 void checkButtons() {
-   for (int i = 0; i < 4; i++) { 
+  for (int i = 0; i < 4; i++) { 
     if(digitalRead(BUTTON_PINS[i])) {
       buttons |= 1 << i;
     } else {
       buttons &= ~(1 << i);
     }
   }
-}
-
-void loop() {    
-  checkButtons();
-
+  
   if(buttons) {
     DEBUG_PRINT(String(buttons));
     switch(buttons) {
@@ -313,7 +332,12 @@ void loop() {
         break;
       case 3: // BUTTONS 1+2
         break;
-      case 4: // BUTTONS 3
+      case 4: // BUTTONS 3 - Next stream
+        config.stream_id++;
+        if(config.stream_id >= config.stream_count) {
+          config.stream_id=0;
+        }
+        streamChanged=true;
         break;
       case 5: // BUTTONS 3+1
         break;
@@ -321,7 +345,7 @@ void loop() {
         break;
       case 7: // BUTTONS 1+2+3
         break;
-      case 8: // BUTTONS 4
+      case 8: // BUTTONS 4 - Display mode #TODO
         break;
       case 9: // BUTTONS 4+1
         break;
@@ -329,16 +353,20 @@ void loop() {
         break;
     }
   }
-  
+}
+
+void loop() {    
   if((millis() - last) > 1100) {  
+    checkButtons();
+
     if(WiFi.status() != WL_CONNECTED) {
       // Not connected? RETRY! 
       connectToWifi();
-    }
-    audio.setVolume(config.volume); 
+    }  
+    
+    audio.setVolume(config.volume);     
     env["volume"] = config.volume;
     updateDisplay();
     last = millis();
   }
-  delay(200);
 }
