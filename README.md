@@ -3,6 +3,8 @@ An Internet web radio based to ESP32
 
 ESP32 connect to the Internet via WiFI (support PSK/PSK2), fetching MP3/AAC audio stream from your favourite webradio (mine is Dance Wave!). Then decode MP3 and send via I2S to DAC. The DAC simply output audio.
 
+![ESP32 WebRadio](https://raw.githubusercontent.com/michelep/ESP32_WebRadio/master/images/esp32_webradio.jpg)
+
 ## Configuration
 
 Edit data/config.json file with your wifi ESSID and password. Fill data/streams.json with your favourites streams. Then burn the whole data directory into SPIFFS partition. Other stuff can be edited via web interface, available after successfull contection to the net. 
