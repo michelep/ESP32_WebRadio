@@ -29,6 +29,12 @@ Edit data/config.json file with your wifi ESSID and password. Fill data/streams.
   - Added streams.json with lists of stream URL to be played
   - Some minon bugs fixed
 
+## Other resources
+
+Start with ESP32 pinouts from here: https://randomnerdtutorials.com/esp32-pinout-reference-gpios/
+Needs the great work from Wolle for MP3 stream decoding and I2S interface: https://github.com/schreibfaul1/ESP32-audioI2S
+A great tutorial for Nokia 5110 LCD displays is there: https://lastminuteengineers.com/nokia-5110-lcd-arduino-tutorial/
+
 ## Contributions
 
 This work is free and far to be perfect nor complete. Contributions and PR are welcome and strongly encouraged!
