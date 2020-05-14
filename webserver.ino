@@ -21,6 +21,14 @@ String templateProcessor(const String& var)
   if(var=="timedate") {
     return String();
   }
+  if(var == "ota_enable") {
+    if(config.ota_enable) {
+      return String("checked");
+    } else {
+      return "";
+    }
+  }
+  
   //
   // Config values
   //
@@ -103,10 +111,20 @@ void initWebServer() {
         }
       } else if(action.equals("set_volume")) {
         config.volume = atoi(request->getParam("value", true)->value().c_str());       
-        response = String("{\"status\":200}");
+        response = String("{\"status\":200, \"volume\": "+String(config.volume)+"}");
       } else if(action.equals("set_contrast")) {
         config.contrast = atoi(request->getParam("value", true)->value().c_str());       
         response = String("{\"status\":200}");
+      } else if(action.equals("toggle_play")) {
+        togglePlay();
+        response = String("{\"status\":200, \"status\": "+String(streamIsPlaying)+"}");
+      } else if(action.equals("play_stream")) {
+        config.stream_id=atoi(request->getParam("value", true)->value().c_str()) | 0;
+        streamChanged=true;
+        response = String("{\"status\":200, \"stream_id\": "+String(config.stream_id)+"}");
+      } else if(action.equals("next_stream")) {
+        nextStream(); 
+        response = String("{\"status\":200, \"stream_id\": "+String(config.stream_id)+"}");
       }
     }
     request->send(200, "text/plain", response);

@@ -9,18 +9,28 @@
 // 0.0.2 - 09.05.2020
 //  - Added streams.json with lists of stream URL to be played
 //  - Some minon bugs fixed
+//
+// 0.0.3 - 14.05.2020
+//  - Some design changes, like 3 mechanical buttons (but you can use capacitive one, if you want)
+//  - Streams list also on webpage, with the ability to play each with a click
+//  - Display graphic improvementes
+//  - Lots of new features and bugs fixed
+//  - Other minor changes
+//
       
 #define __DEBUG__
+//#define __NEOPIXEL__ // Uncomment if you plain to use one or more NeoPixel
 
 // Firmware data
 const char BUILD[] = __DATE__ " " __TIME__;
 #define FW_NAME         "esp32-webradio"
-#define FW_VERSION      "0.0.2"
+#define FW_VERSION      "0.0.3"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <WiFiClient.h>
 #include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 
 #include "time.h"
 
@@ -37,13 +47,15 @@ const char BUILD[] = __DATE__ " " __TIME__;
 
 Audio audio;
 
-// CJMCU-0401 Capacitive touch buttons
-const int BUTTON_PINS[4] = {34, 35, 32, 33};
+// Control buttons
+#define BUTTONS_NUM 3
+const int BUTTONS_PINS[BUTTONS_NUM] = {34, 35, 32};
 
 // LCD PCD8544 - NOKIA 5110
 #include <SPI.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
+#include <Fonts/Org_01.h>
 
 #define DISPLAY_SCLK 23
 #define DISPLAY_DIN 19
@@ -52,9 +64,12 @@ const int BUTTON_PINS[4] = {34, 35, 32, 33};
 #define DISPLAY_RST 14
 
 #define DISPLAY_BL 27
+#define DISPLAY_BL_DEFAULT 100 // Backlight LEDs PWM duty-cycle
 
 // Serial clock out (SCLK), Serial data out (DIN), Data/Command select (D/C), LCD chip select (CS), LCD reset (RST)
 Adafruit_PCD8544 display = Adafruit_PCD8544(DISPLAY_SCLK, DISPLAY_DIN, DISPLAY_DC, DISPLAY_CS, DISPLAY_RST);
+
+#ifdef __NEOPIXEL__
 
 // Neopixel
 // https://github.com/adafruit/Adafruit_NeoPixel
@@ -63,6 +78,8 @@ Adafruit_PCD8544 display = Adafruit_PCD8544(DISPLAY_SCLK, DISPLAY_DIN, DISPLAY_D
 #define PIN        2 
 #define NUMPIXELS  1 // Popular NeoPixel ring size
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+
+#endif
 
 // WebServer
 #include <AsyncTCP.h>
@@ -94,6 +111,8 @@ struct Config {
   int8_t ntp_timezone;
   // Host config
   char hostname[16];
+  bool ota_enable;
+  char ota_password[8];
   // Radio podcast
   int8_t stream_id;
   int8_t stream_count;
@@ -113,20 +132,26 @@ Config config; // Global config object
 static int last; // millis counter
 bool streamIsValid = false;
 bool streamChanged = true;
+bool streamIsPlaying = false;
 
 DynamicJsonDocument env(256);
   
 // ************************************
-// DEBUG_PRINT()
+// DEBUG_PRINT() and DEBUG_PRINTLN()
 //
 // send message via RSyslog (if enabled) or fallback on Serial 
 // ************************************
 void DEBUG_PRINT(String message) {
 #ifdef __DEBUG__
-  Serial.println(message);
+  Serial.print(message);
 #endif
 }
 
+void DEBUG_PRINTLN(String message) {
+#ifdef __DEBUG__
+  Serial.println(message);
+#endif
+}
 
 // ************************************
 // connectToWifi()
@@ -137,7 +162,7 @@ bool connectToWifi() {
   uint8_t timeout=0;
 
   if(strlen(config.wifi_essid) > 0) {
-    DEBUG_PRINT("[INIT] Connecting to "+String(config.wifi_essid));
+    DEBUG_PRINT("[INIT] Connecting to "+String(config.wifi_essid)+"...");
 
     WiFi.begin(config.wifi_essid, config.wifi_password);
 
@@ -146,11 +171,11 @@ bool connectToWifi() {
       timeout++;
     }
     if(WiFi.status() == WL_CONNECTED) {
-      DEBUG_PRINT("CONNECTED. IP:"+WiFi.localIP().toString()+" GW:"+WiFi.gatewayIP().toString());
+      DEBUG_PRINTLN("CONNECTED. IP:"+WiFi.localIP().toString()+" GW:"+WiFi.gatewayIP().toString());
 
       env["ip"] = WiFi.localIP().toString();
       if (MDNS.begin(config.hostname)) {
-        DEBUG_PRINT("[INIT] MDNS responder started");
+        DEBUG_PRINTLN("[INIT] MDNS responder started: "+String(config.hostname));
         // Add service to MDNS-SD
         MDNS.addService("http", "tcp", 80);
       }
@@ -159,11 +184,11 @@ bool connectToWifi() {
       
       return true;  
     } else {
-      DEBUG_PRINT("[ERROR] Failed to connect to WiFi");
+      DEBUG_PRINTLN("[ERROR] Failed to connect to WiFi");
       return false;
     }
   } else {
-    DEBUG_PRINT("[ERROR] Please configure Wifi");
+    DEBUG_PRINTLN("[ERROR] Please configure Wifi");
     return false; 
   }
 }
@@ -177,8 +202,9 @@ void audioTask(void *pvParameters) {
       playStream(config.stream_id);
       streamChanged=false;
     }
-
     audio.loop();  
+    
+    streamIsPlaying = audio.isRunning();
   }
 }
 
@@ -202,36 +228,46 @@ void setup() {
   delay(1000);
 
   // Initialize SPIFFS
+  DEBUG_PRINT("[INIT] Initializing SPIFFS...");
   if(!SPIFFS.begin()){
-    DEBUG_PRINT("[ERROR] SPIFFS mount failed. Try formatting...");
+    DEBUG_PRINTLN("[ERROR] SPIFFS mount failed. Try formatting...");
     if(SPIFFS.format()) {
-      DEBUG_PRINT("[INIT] SPIFFS initialized successfully");
+      DEBUG_PRINTLN("[INIT] SPIFFS initialized successfully");
     } else {
-      DEBUG_PRINT("[FATAL] SPIFFS fatal error");
+      DEBUG_PRINTLN("[FATAL] SPIFFS fatal error");
       ESP.restart();
     }
   } else {
-    DEBUG_PRINT("[INIT] SPIFFS OK");
+    DEBUG_PRINTLN("OK");
   }
 
-  // Initialize 4-buttons capacitive board
-  for (int i = 0; i < 4; i++) {
-    pinMode(BUTTON_PINS[i], INPUT_PULLUP);
+  // Initialize buttons control board
+  for (int i = 0; i < BUTTONS_NUM; i++) {
+    pinMode(BUTTONS_PINS[i], INPUT);
   }  
 
   // Load configuration
   loadConfigFile();
     
   // Initialize DISPLAY
+  DEBUG_PRINT("[INIT] Initialize display...");
+
   display.begin();
-  display.setContrast(config.contrast);
+  display.setContrast(100);
   
   pinMode(DISPLAY_BL,OUTPUT);
   ledcSetup(0, 1000, 8);
   ledcAttachPin(DISPLAY_BL, 0);
-  ledcWrite(0, 100);
+  // Fade-in
+  for(uint8_t i=0;i<DISPLAY_BL_DEFAULT;i++) {
+    ledcWrite(0, i);
+    delay(10);
+  }
+  // A tiny,stylized font with all characters within a 6 pixel height.
+  display.setFont(&Org_01);
   
   display.display();
+  DEBUG_PRINTLN("OK");
 
   // Connect to WiFi network
   connectToWifi();
@@ -239,43 +275,99 @@ void setup() {
   // Initialize Web Server
   initWebServer();
 
+  // Initialize OTA
+  if(config.ota_enable) {
+    DEBUG_PRINT("[INIT] Initialize OTA...");
+    // ArduinoOTA.setPort(3232);
+    ArduinoOTA.setHostname(config.hostname);
+
+    ArduinoOTA
+      .onStart([]() {
+        String type;
+        if (ArduinoOTA.getCommand() == U_FLASH)
+          type = "sketch";
+        else // U_SPIFFS
+          type = "filesystem";
+        Serial.println("Start updating " + type);
+      })
+      .onEnd([]() {
+        Serial.println("\nEnd");
+      })
+      .onProgress([](unsigned int progress, unsigned int total) {
+        Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+      })
+      .onError([](ota_error_t error) {
+        Serial.printf("Error[%u]: ", error);
+        if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+        else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+        else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+        else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+        else if (error == OTA_END_ERROR) Serial.println("End Failed");
+      });
+    ArduinoOTA.begin();
+    DEBUG_PRINTLN("OK");
+  }
+  //
+  DEBUG_PRINT("[INIT] Initialize audio...");
+
   env["volume"] = config.volume;
 
   audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
   audio.setVolume(env["volume"].as<int>());
+  DEBUG_PRINTLN("OK");
 
+#ifdef __NEOPIXEL__
+  DEBUG_PRINT("[INIT] Initialize NeoPixel...");
   pixels.begin();
   pixels.setBrightness(80);
   pixels.show(); // Initialize all pixels to 'off'
+  DEBUG_PRINTLN("OK");
+#endif
 
   //
   printStreamsDB();
 
   // let's fly!
-  DEBUG_PRINT("[INIT] Ready: let's fly!");
+  DEBUG_PRINTLN("[INIT] Ready: let's fly!");
   env["status"] = "Ready";
 
   // Launch audioTask on CORE0 with high priority
+  disableCore0WDT(); // Disable watchdog on CORE0
   xTaskCreatePinnedToCore(
                   audioTask,   /* Function to implement the task */
-                    "audioTask", /* Name of the task */
-                    10000,      /* Stack size in words */
-                    NULL,       /* Task input parameter */
-                    10,          /* Priority of the task */
-                    NULL,       /* Task handle. */
-                    0);  /* Core where the task should run */
+                  "audioTask", /* Name of the task */
+                  10000,      /* Stack size in words */
+                  NULL,       /* Task input parameter */
+                  15,          /* Priority of the task */
+                  NULL,       /* Task handle. */
+                  0);  /* Core where the task should run */
 }
 
 void updateDisplay() {
+  // Graphic display of 84×48 pixels
   display.clearDisplay();
   display.setContrast(config.contrast);
 
-  display.setCursor(0,0);
   display.setTextSize(1);
-  display.println(env["stream_station"].as<const char*>());
+  // Top black BAR with WiFi signal power
+  display.fillRect(0, 0, 84, 8, BLACK);
+  display.setTextColor(WHITE, BLACK);
+  display.setCursor(2,6);
+  display.println("WiFi: "+String(WiFi.RSSI()));
   
-  display.setCursor(0,20);
-  display.println(env["stream_title"].as<const char*>());
+  // Display stream name
+  display.setTextColor(BLACK, WHITE);
+  display.setCursor(2,16);  
+  display.println(env["stream_station"].as<const char*>());
+
+  // Display other info, like song title and so on...
+  display.setCursor(0,24);
+  if(streamIsPlaying) {
+    display.println(env["stream_title"].as<const char*>());
+  } else {
+    display.setCursor(8,20);
+    display.println("*** PAUSE ***");    
+  }
   
   display.display();
 }
@@ -285,7 +377,7 @@ bool playStream(uint8_t stream_id) {
     audio.connecttohost(config.stream_url);
     return true;
   } 
-  DEBUG_PRINT("No STREAM URL defined!");
+  DEBUG_PRINTLN("[AUDIO] No STREAM URL defined!");
   env["status"] = "No stream url defined!";  
   return false;
 }
@@ -297,7 +389,7 @@ void audio_info(const char *info){
     } else if(sinfo.startsWith("StreamTitle=")) {
       env["stream_title"] = sinfo.substring(12,44); // Take only the first 32 chars (max)
     } else {
-      DEBUG_PRINT("audio_info: "); DEBUG_PRINT(info);
+      DEBUG_PRINT("[AUDIO] "); DEBUG_PRINTLN(info);
     }
 }
 
@@ -306,11 +398,33 @@ void audio_showstation(const char *info){
   env["stream_station"] = sinfo.substring(0,16); // First 16 chars only (max)
 }
 
-uint8_t buttons=false;
+// Stream actions
+void nextStream() {
+  config.stream_id++;
+  if(config.stream_id >= config.stream_count) {
+    config.stream_id=0;
+  }
+  streamChanged=true;
+}
+
+void togglePlay() {
+  streamIsPlaying = audio.pauseResume();
+  DEBUG_PRINT("[AUDIO] pauseResume(): ");
+  if(streamIsPlaying) {
+    DEBUG_PRINTLN("PLAY");
+    env["status"] = "Playing "+config.stream_id;
+  } else {
+    DEBUG_PRINTLN("PAUSE");
+    env["status"] = "Pause";
+  }
+}
+
+// Control buttons
+uint8_t buttons=0;
 
 void checkButtons() {
-  for (int i = 0; i < 4; i++) { 
-    if(digitalRead(BUTTON_PINS[i])) {
+  for (int i = 0; i < BUTTONS_NUM; i++) { 
+    if(digitalRead(BUTTONS_PINS[i])) {
       buttons |= 1 << i;
     } else {
       buttons &= ~(1 << i);
@@ -318,7 +432,8 @@ void checkButtons() {
   }
   
   if(buttons) {
-    DEBUG_PRINT(String(buttons));
+    DEBUG_PRINT("[BUTTON] Pressed ");
+    DEBUG_PRINTLN(String(buttons));
     switch(buttons) {
       case 1: // BUTTONS 1 - Volume UP
         if(config.volume < MAX_VOLUME) {
@@ -330,24 +445,17 @@ void checkButtons() {
           config.volume = config.volume-1;
         }
         break;
-      case 3: // BUTTONS 1+2
+      case 3: // BUTTONS 1+2 - Play/Pause
+        togglePlay();
         break;
       case 4: // BUTTONS 3 - Next stream
-        config.stream_id++;
-        if(config.stream_id >= config.stream_count) {
-          config.stream_id=0;
-        }
-        streamChanged=true;
+        nextStream();
         break;
       case 5: // BUTTONS 3+1
         break;
       case 6: // BUTTONS 2+3
         break;
       case 7: // BUTTONS 1+2+3
-        break;
-      case 8: // BUTTONS 4 - Display mode #TODO
-        break;
-      case 9: // BUTTONS 4+1
         break;
       default:
         break;
@@ -356,6 +464,10 @@ void checkButtons() {
 }
 
 void loop() {    
+  if(config.ota_enable) {
+    ArduinoOTA.handle();
+  }
+  
   if((millis() - last) > 1100) {  
     checkButtons();
 

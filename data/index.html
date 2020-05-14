@@ -6,7 +6,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
 	<meta name="description" content="ESP32 Web Radio" />
         <meta name="author" content="Michele <o-zone@zerozone.it> Pinassi" />
-	<title>ESP32 Web Radio - %hostname%</title>
+	<title>ESP32 WebRadio - %hostname%</title>
 	<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
 	<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Smlep5jCw/wG7hdkwQ/Z5nLIefveQRIY9nfy6xoR1uRYBtpZgI6339F5dgvm/e9B" crossorigin="anonymous" />
 	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/js/bootstrap.min.js" integrity="sha384-o+RDsa0aLu++PJvFqy8fFScvbHFLtbvScb8AjopnFD+iEQ7wo/CG0xlczd+2O/em" crossorigin="anonymous"></script>
@@ -31,9 +31,9 @@
 	    <div class="alert alert-info" id="status_field" role="alert">System status is loading...</div>
 	    <div class="card-deck"><!-- CARD DECK A -->
 		<div class="card bg-light mb-6 justify-content-md-center">
-    		    <div class="card-header">
-    			<h2 class="card-header-title">Stream</h2>
-    		    </div>
+		    <div class="card-header">
+			<h2 class="card-header-title">Stream</h2>
+		    </div>
 		    <div class="card-body text-center">
 			<h2 id="stream_title">
 			    ...
@@ -47,9 +47,9 @@
 		    </div>
 		</div>
 		<div class="card bg-light mb-6 justify-content-md-center">
-    		    <div class="card-header">
-    			<h2 class="card-header-title">Controls</h2>
-    		    </div>
+		    <div class="card-header">
+			<h2 class="card-header-title">Controls</h2>
+		    </div>
 		    <div class="card-body text-center">
 			<div class="form-group row">
 			    <label class="col-sm-2 col-form-label">Audio volume</label>
@@ -64,18 +64,49 @@
 			    </div>
 			</div>
 		    </div>
+		    <div class="card-footer text-center">
+			<a href="javascript:void(0);" onClick="ajaxSet('next_stream','');" class="btn btn-info">Next stream</a>
+			<a href="javascript:void(0);" onClick="ajaxSet('toggle_play','');" class="btn btn-info">Play/Pause</a>
+		    </div>
 		</div>
 	    </div><!-- /CARD DECK A -->
+	    <br/><div class="accordion" id="streamsSection"><!-- STREAMS -->
+		<div class="card"><!-- CONFIG -->
+		    <div class="card-header" id="headingStreams">
+			<h5 class="mb-0">
+		    	    <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseStreams" aria-expanded="true" aria-controls="collapseStreams">
+		    	        Streams
+			    </button>
+			</h5>
+		    </div>
+		    <div class="collapse" id="collapseStreams" aria-labelledby="headingStreams" data-parent="#streamsSection">
+			<div class="card-body">
+			    <form class="form" method="POST" action="/post" id="streams_form">
+				<input type="hidden" name="action" value="streams">
+				<div id="streams_list">
+				</div>
+        			<div class="form-group row">
+				    <label for="colFormLabelSm_last" class="col-sm-1 col-form-label col-form-label-sm text-center">Add new</label>
+				    <div class="col-sm-11">
+					<input type="text" class="form-control form-control-sm" id="colFormLabelSm_last" name="stream[]" value="">
+				    </div>
+				</div>
+				<input type="submit" class="btn btn-info" value="Save" />
+			    </form>
+			</div>
+		    </div>
+		</div>
+	    </div>
 	    <br/><div class="accordion" id="configSection"><!-- CONFIGURATION -->
 		<div class="card"><!-- CONFIG -->
-		    <div class="card-header" id="headingManual">
+		    <div class="card-header" id="headingConfig">
 			<h5 class="mb-0">
 		    	    <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseConfig" aria-expanded="true" aria-controls="collapseConfig">
 		    	        Configuration
 			    </button>
 			</h5>
 		    </div>
-		    <div class="collapse" id="collapseConfig" aria-labelledby="headingManual" data-parent="#configSection">
+		    <div class="collapse" id="collapseConfig" aria-labelledby="headingConfig" data-parent="#configSection">
 			<div class="card-body">
 			    <form class="form" method="POST" action="/post">
 				<input type="hidden" name="action" value="config">
@@ -97,9 +128,17 @@
 				    </div>
 				</div>
 				<div class="form-row">
-				    <label for="formHostName">Hostname</label>
-				    <input type="text" class="form-control" id="form_hostname" name="hostname" value="%hostname%" />
-				    <p class="text-muted">Set hostname</p>
+				    <div class="col-md-8">
+					<label for="formHostName">Hostname</label>
+					<input type="text" class="form-control" id="form_hostname" name="hostname" value="%hostname%" />
+					<p class="text-muted">Set hostname</p>
+				    </div>
+				    <div class="col-md-4">
+					<label for="formHostName">OTA updates</label>
+					<input type="checkbox" class="form-control" id="form_ota" name="ota_enable" checked="%ota_enable%" />
+					<p class="text-muted">Check to allow OTA firmware updates</p>
+					
+				    </div>
 				</div>
 				<div class="form-row">
 				    <div class="col-md-6">
@@ -179,6 +218,7 @@ function ajaxSet(action, value) {
     }).fail(function(xhr, text, error) {
 	$('#status_field').html('Timeout ('+error+'): is connected?');
     });
+    return false;
 }
 
 $(document).ready(function(){
@@ -187,6 +227,17 @@ $(document).ready(function(){
 	var action=$(this).attr("name");
 	ajaxSet(action,value);
     });
+    // Load streams lists and populate streams form list
+    $.ajax({
+	'url' : '/streams.json',
+	dataType: 'json',
+	success: function(json){
+    	    $.each(json["streams"], function(key, value){
+        	$("#streams_list").append('<div class=\"form-group row\"><label for=\"colFormLabelSm_'+key+'\" class=\"col-sm-1 col-form-label col-form-label-sm text-center\"><b>'+key+'</b></label><div class=\"col-sm-10\"><input type=\"text\" class=\"form-control form-control-sm\" id=\"colFormLabelSm_'+key+'\" name=\"stream[]\" value=\"'+value+'\"></div><div class=\"col-sm-1\"><a href=\"javascript:void(0);\" onClick=\"ajaxSet(\'play_stream\',\''+key+'\');\" class=\"btn btn-info\">Play</a></div></div>');
+    	    });
+	}	
+    });
+    //
     ajaxCall();
 })
 	</script>

@@ -14,17 +14,17 @@
 bool loadConfigFile() {
   DynamicJsonDocument root(512);
   
-  DEBUG_PRINT("[DEBUG] loadConfigFile()");
+  DEBUG_PRINT("[CONFIG] Loading config...");
   
   configFile = SPIFFS.open(CONFIG_FILE, "r");
   if (!configFile) {
-    DEBUG_PRINT("[CONFIG] Config file not available");
+    DEBUG_PRINTLN("ERROR: Config file not available");
     return false;
   } else {
     // Get the root object in the document
     DeserializationError err = deserializeJson(root, configFile);
     if (err) {
-      DEBUG_PRINT("[CONFIG] Failed to read config file:"+String(err.c_str()));
+      DEBUG_PRINTLN("ERROR: "+String(err.c_str()));
       return false;
     } else {
       strlcpy(config.wifi_essid, root["wifi_essid"], sizeof(config.wifi_essid));
@@ -35,8 +35,9 @@ bool loadConfigFile() {
       config.stream_id = root["stream_id"] | 0;
       config.volume = root["volume"] | 20;
       config.contrast = root["contrast"] | 50;
+      config.ota_enable = root["ota_enable"] | true;
 
-      DEBUG_PRINT("[CONFIG] Configuration loaded");
+      DEBUG_PRINTLN("OK");
     }
   }
   configFile.close();
@@ -45,7 +46,7 @@ bool loadConfigFile() {
 
 bool saveConfigFile() {
   DynamicJsonDocument root(512);
-  DEBUG_PRINT("[DEBUG] saveConfigFile()");
+  DEBUG_PRINT("[CONFIG] Saving config...");
 
   root["wifi_essid"] = config.wifi_essid;
   root["wifi_password"] = config.wifi_password;
@@ -55,14 +56,16 @@ bool saveConfigFile() {
   root["stream_id"] = config.stream_id;
   root["volume"] = config.volume;
   root["contrast"] = config.contrast;
+  root["ota_enable"] = config.ota_enable;
   
   configFile = SPIFFS.open(CONFIG_FILE, "w");
   if(!configFile) {
-    DEBUG_PRINT("[CONFIG] Failed to create config file !");
+    DEBUG_PRINTLN("ERROR: Failed to create config file !");
     return false;
   }
   serializeJson(root,configFile);
   configFile.close();
+  DEBUG_PRINTLN("OK");
   return true;
 }
 
@@ -70,46 +73,47 @@ bool saveConfigFile() {
 void printStreamsDB() {
   DynamicJsonDocument doc(512);
   
-  DEBUG_PRINT("[DEBUG] printStreamDB()");
+  DEBUG_PRINT("[DB] printStreamDB()");
   
   File dbFile = SPIFFS.open(DB_FILE, "r");
   if (!dbFile) {
-    DEBUG_PRINT("[DB] DB file not found");
+    DEBUG_PRINTLN("ERROR: file not found");
     return;
   }
   
   // Get the root object in the document
   DeserializationError err = deserializeJson(doc, dbFile);
   if (err) {
-    DEBUG_PRINT("[DB] Failed to read DB file:"+String(err.c_str()));
+    DEBUG_PRINTLN("[ERROR: "+String(err.c_str()));
     return;
   }
 
   JsonArray streams = doc["streams"];
 // streams[0] => "http://stream.dancewave.online:8080/dance.mp3"
   
-  DEBUG_PRINT("DB memory usage:"+String(streams.memoryUsage())+" Bytes");
+  DEBUG_PRINTLN("OK. DB memory usage:"+String(streams.memoryUsage())+" bytes");
 
   for(uint8_t i=0;i<streams.size();i++) {
-    DEBUG_PRINT(streams[i]);
+    DEBUG_PRINT("["+String(i)+"] ");
+    DEBUG_PRINTLN(streams[i]);
   }
 }
 
 bool getStreamURL(uint8_t id) {
   DynamicJsonDocument doc(512);
   
-  DEBUG_PRINT("[DEBUG] getStreamUrl("+String(id)+")");
+  DEBUG_PRINT("[DB] getStreamUrl("+String(id)+")...");
   
   File dbFile = SPIFFS.open(DB_FILE, "r");
   if (!dbFile) {
-    DEBUG_PRINT("[DB] DB file not found");
+    DEBUG_PRINTLN("ERROR: DB file not found");
     return false;
   }
   
   // Get the root object in the document
   DeserializationError err = deserializeJson(doc, dbFile);
   if (err) {
-    DEBUG_PRINT("[DB] Failed to read DB file:"+String(err.c_str()));
+    DEBUG_PRINTLN("ERROR: "+String(err.c_str()));
     return false;
   }
 
@@ -119,7 +123,7 @@ bool getStreamURL(uint8_t id) {
 
   if(id < streams.size()) {
     strncpy(config.stream_url,streams[id],64);
-    DEBUG_PRINT("[DB] Loaded "+String(config.stream_url));
+    DEBUG_PRINTLN("OK: "+String(config.stream_url));
     return true;
   } else {
     return false;
