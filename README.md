@@ -1,11 +1,19 @@
 # ESP32_WebRadio
 An Internet web radio based to ESP32
 
-ESP32 connect to the Internet via WiFI (support PSK/PSK2), fetching MP3/AAC audio stream from your favourite webradio (mine is Dance Wave!). Then decode MP3 and send via I2S to DAC. The DAC simply output audio.
+ESP32 connect to the Internet via WiFI (support WEP/WPA/WPA2), fetching MP3/AAC audio stream from your favourite webradios (mine is Dance Wave!). Then decode MP3 and send via I2S to DAC. The DAC simply output audio to a PAM8403 3W amplifier.
 
-![ESP32 WebRadio](https://raw.githubusercontent.com/michelep/ESP32_WebRadio/master/images/esp32_webradio_front.jpg)
+My grandpa made for me a fantastic wood case that sits perfectly on my book shelf in the linving room ;-)
+
+![ESP32 WebRadio](https://raw.githubusercontent.com/michelep/ESP32_WebRadio/master/images/esp32_webradio_overview.jpg)
+
+This is the inside, with the mainboard, battery, charge/discharge module, speakers and, on the right, hide by a panel, the 4 buttons control board:
 
 ![ESP32 WebRadio inside](https://raw.githubusercontent.com/michelep/ESP32_WebRadio/master/images/esp32_webradio_inside.jpg)
+
+This is a detail of the Nokia 5110 LCD display:
+
+![ESP32 WebRadio](https://raw.githubusercontent.com/michelep/ESP32_WebRadio/master/images/esp32_webradio_front.jpg)
 
 ## Configuration
 
@@ -18,8 +26,11 @@ For a basic board:
 - DOIT ESP32 WebKit v1 (or other suitable ESP32 board...) (On [AliExpress](https://it.aliexpress.com/item/4000141080480.html))
 - CJMCU 5102 DAC [AliExpress](https://it.aliexpress.com/item/33023894667.html)
 - PCD8544 LCD Display (aka NOKIA 5110 display) module (On [AliExpress](https://it.aliexpress.com/item/32959195226.html))
+- PAM8403 2*3W Amplifier board (On [AliExpress](https://it.aliexpress.com/item/32968752490.html))
 - One or more NeoPixel, but they are not mandatory ;-)
+- Two 8 Ohm speaker
 - 3 x 10K Ohm 1/8W resistors
+- 2 x 100K Ohm trimmer
 - 330 Ohm 1/8W resistor
 - 860 Ohm 1/8 W resistor, only if you want to add one or more NeoPixels
 - 3 push buttons (On [AliExpress](https://it.aliexpress.com/item/32995191209.html))
