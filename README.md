@@ -13,14 +13,19 @@ Edit data/config.json file with your wifi ESSID and password. Fill data/streams.
 
 ## Bill of materials
 
+For a basic board:
+
 - DOIT ESP32 WebKit v1 (or other suitable ESP32 board...) (On [AliExpress](https://it.aliexpress.com/item/4000141080480.html))
 - CJMCU 5102 DAC [AliExpress](https://it.aliexpress.com/item/33023894667.html)
-- PCD8544 LCD Display (aka NOKIA 5110 display) module (On [AliExpress](https://it.aliexpress.com/item/32959195226.html)9
+- PCD8544 LCD Display (aka NOKIA 5110 display) module (On [AliExpress](https://it.aliexpress.com/item/32959195226.html))
 - One or more NeoPixel, but they are not mandatory ;-)
-- 3 x 10KOhm 1/8W resistors
-- 330Ohm 1/8W resistor
-- 810Ohm 1/8 W resistor, only if you want to add one or more NeoPixels
+- 3 x 10K Ohm 1/8W resistors
+- 330 Ohm 1/8W resistor
+- 860 Ohm 1/8 W resistor, only if you want to add one or more NeoPixels
 - 3 push buttons (On [AliExpress](https://it.aliexpress.com/item/32995191209.html))
+
+On mine, i've added an 18650 LiBo battery and a voltage charge/discharge regulator (on [Aliexpress](https://it.aliexpress.com/item/32824032545.html)), with key pin (connected to the fourth button) to power on and off. With this module, i can power (anche charge the battery) 
+using USB. I've choosed an USB B connector (i have some lying on the table...) and it works perfecly ;-). With a fully charged battery, it can play sound at reasonable volume for about 2 hours.
 
 ## Schematic
 ![Schematic](https://raw.githubusercontent.com/michelep/ESP32_WebRadio/master/images/schematic.png)
