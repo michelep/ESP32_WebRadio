@@ -3,7 +3,9 @@ An Internet web radio based to ESP32
 
 ESP32 connect to the Internet via WiFI (support PSK/PSK2), fetching MP3/AAC audio stream from your favourite webradio (mine is Dance Wave!). Then decode MP3 and send via I2S to DAC. The DAC simply output audio.
 
-![ESP32 WebRadio](https://raw.githubusercontent.com/michelep/ESP32_WebRadio/master/images/esp32_webradio.jpg)
+![ESP32 WebRadio](https://raw.githubusercontent.com/michelep/ESP32_WebRadio/master/images/esp32_webradio_front.jpg)
+
+![ESP32 WebRadio inside](https://raw.githubusercontent.com/michelep/ESP32_WebRadio/master/images/esp32_webradio_inside.jpg)
 
 ## Configuration
 
@@ -11,11 +13,14 @@ Edit data/config.json file with your wifi ESSID and password. Fill data/streams.
 
 ## Bill of materials
 
-- DOIT ESP32 WebKit v1 (or other suitable ESP32 board...)
-- CJMCU 0401 - 4 capacitive touch button module
-- CJMCU PCM5102 DAC 
-- PCD8544 LCD Display (aka NOKIA 5110 display) module
+- DOIT ESP32 WebKit v1 (or other suitable ESP32 board...) ![AliExpress](https://it.aliexpress.com/item/4000141080480.html)
+- CJMCU 5102 DAC ![AliExpress](https://it.aliexpress.com/item/33023894667.html)
+- PCD8544 LCD Display (aka NOKIA 5110 display) module ![AliExpress](https://it.aliexpress.com/item/32959195226.html)
 - One or more NeoPixel, but they are not mandatory ;-)
+- 3 x 10KOhm 1/8W resistors
+- 330Ohm 1/8W resistor
+- 810Ohm 1/8 W resistor, only if you want to add one or more NeoPixels
+- 3 push buttons ![AliExpress](https://it.aliexpress.com/item/32995191209.html)
 
 ## Schematic
 ![Schematic](https://raw.githubusercontent.com/michelep/ESP32_WebRadio/master/images/schematic.png)
@@ -28,6 +33,13 @@ Edit data/config.json file with your wifi ESSID and password. Fill data/streams.
 0.0.2 - 09.05.2020
   - Added streams.json with lists of stream URL to be played
   - Some minon bugs fixed
+
+0.0.3 - 14.05.2020
+  - Some design changes, like 3 mechanical buttons (but you can use capacitive ones, if you want)
+  - Streams list also on webpage, with the ability to play each with a click
+  - Display graphic improvementes
+  - Lots of new features and bugs fixed
+  - Other minor changes
 
 ## Other resources
 
