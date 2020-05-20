@@ -57,6 +57,11 @@ using USB. I've choosed an USB B connector (i have some lying on the table...) a
   - Lots of new features and bugs fixed
   - Other minor changes
 
+0.0.4 - 20.05.2020
+  - Better OTA handling 
+  - Display now show scrolling title and stream name, current time and wifi power in top bar, volume in bottom (WIP)
+  - Miscellaneous improvements and bug fixed
+
 ## Other resources
 
 Start with ESP32 pinouts from here: https://randomnerdtutorials.com/esp32-pinout-reference-gpios/

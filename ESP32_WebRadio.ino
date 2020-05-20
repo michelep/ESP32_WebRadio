@@ -17,6 +17,10 @@
 //  - Lots of new features and bugs fixed
 //  - Other minor changes
 //
+// 0.0.4
+//  - Better OTA handling
+//  - Display now show scrolling title and stream name, current time and wifi power in top bar, volume in bottom (WIP)
+//  - Miscellaneous improvements and bug fixed
       
 #define __DEBUG__
 //#define __NEOPIXEL__ // Uncomment if you plain to use one or more NeoPixel
@@ -24,7 +28,7 @@
 // Firmware data
 const char BUILD[] = __DATE__ " " __TIME__;
 #define FW_NAME         "esp32-webradio"
-#define FW_VERSION      "0.0.3"
+#define FW_VERSION      "0.0.4"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -50,6 +54,19 @@ Audio audio;
 // Control buttons
 #define BUTTONS_NUM 3
 const int BUTTONS_PINS[BUTTONS_NUM] = {34, 35, 32};
+
+// Icons
+#define audio_icon_width 5
+#define audio_icon_height 10
+
+static const uint8_t PROGMEM audio_icon_bits[] = {
+   0x10, 0x18, 0x1c, 0x1f, 0x1f, 0x1f, 0x1f, 0x1c, 0x18, 0x10 };
+
+#define wifi_icon_width 15
+#define wifi_icon_height 10
+static const uint8_t PROGMEM wifi_icon_bits[] = {
+   0x40, 0x01, 0xf8, 0x0f, 0x3e, 0x3e, 0x0e, 0x38, 0xf2, 0x27, 0xf8, 0x0f,
+   0x18, 0x04, 0xc0, 0x01, 0xc0, 0x01, 0x80, 0x00 };
 
 // LCD PCD8544 - NOKIA 5110
 #include <SPI.h>
@@ -132,7 +149,9 @@ Config config; // Global config object
 static int last; // millis counter
 bool streamIsValid = false;
 bool streamChanged = true;
+bool streamIsPaused = false;
 bool streamIsPlaying = false;
+bool deviceIsOTA = false;
 
 DynamicJsonDocument env(256);
   
@@ -198,13 +217,15 @@ bool connectToWifi() {
 //
 void audioTask(void *pvParameters) {
   while(1) {
-    if(streamChanged) {
-      playStream(config.stream_id);
-      streamChanged=false;
-    }
-    audio.loop();  
+    if(!streamIsPaused) {
+      if(streamChanged) {
+        playStream(config.stream_id);
+        streamChanged=false;
+      }
+      audio.loop();  
     
-    streamIsPlaying = audio.isRunning();
+      streamIsPlaying = audio.isRunning();
+    }
   }
 }
 
@@ -256,7 +277,7 @@ void setup() {
   display.setContrast(100);
   
   pinMode(DISPLAY_BL,OUTPUT);
-  ledcSetup(0, 1000, 8);
+  ledcSetup(0, 12000, 8);
   ledcAttachPin(DISPLAY_BL, 0);
   // Fade-in
   for(uint8_t i=0;i<DISPLAY_BL_DEFAULT;i++) {
@@ -289,12 +310,18 @@ void setup() {
         else // U_SPIFFS
           type = "filesystem";
         Serial.println("Start updating " + type);
+        deviceIsOTA=true;
+        streamIsPaused=true;
       })
       .onEnd([]() {
         Serial.println("\nEnd");
+        deviceIsOTA=false;
+        streamIsPaused=false;
       })
       .onProgress([](unsigned int progress, unsigned int total) {
         Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+        display.setCursor(8,24);
+        display.printf("Progress: %u%%\r", (progress / (total / 100)));    
       })
       .onError([](ota_error_t error) {
         Serial.printf("Error[%u]: ", error);
@@ -303,6 +330,7 @@ void setup() {
         else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
         else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
         else if (error == OTA_END_ERROR) Serial.println("End Failed");
+        deviceIsOTA=false;
       });
     ArduinoOTA.begin();
     DEBUG_PRINTLN("OK");
@@ -343,38 +371,85 @@ void setup() {
                   0);  /* Core where the task should run */
 }
 
+String zeroPadding(int digit) {
+  if(digit < 10) {
+    return String("0"+String(digit));
+  }
+  return String(digit);
+}
+
+uint8_t t_idx=0;
+
 void updateDisplay() {
   // Graphic display of 84×48 pixels
   display.clearDisplay();
   display.setContrast(config.contrast);
 
+// If there's an OTA running...
+  if(deviceIsOTA) {
+    display.setCursor(2,16);  
+    display.println("Updating.Please wait!");       
+    display.display();
+    return;
+  }
+
   display.setTextSize(1);
   // Top black BAR with WiFi signal power
   display.fillRect(0, 0, 84, 8, BLACK);
+  display.drawXBitmap(0, 0, wifi_icon_bits, wifi_icon_width, wifi_icon_height, 0x00);
   display.setTextColor(WHITE, BLACK);
-  display.setCursor(2,6);
-  display.println("WiFi: "+String(WiFi.RSSI()));
-  
-  // Display stream name
-  display.setTextColor(BLACK, WHITE);
-  display.setCursor(2,16);  
-  display.println(env["stream_station"].as<const char*>());
+  display.setCursor(12,6);
+  display.println(String(WiFi.RSSI())+"dB");
 
-  // Display other info, like song title and so on...
-  display.setCursor(0,24);
-  if(streamIsPlaying) {
-    display.println(env["stream_title"].as<const char*>());
+  display.setCursor(48,6);
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    DEBUG_PRINTLN("[TIME] Failed to obtain time");
   } else {
-    display.setCursor(8,20);
-    display.println("*** PAUSE ***");    
+    display.println(&timeinfo, "%H:%M:%S");
   }
+  
+  // Display stream name and song title (scrolling)
+  display.setTextColor(BLACK, WHITE);
+  display.setCursor(4,16);  
+  String title = env["stream_station"].as<String>();
+    
+  if(env["stream_title"]) {
+    title = title + " - "+env["stream_title"].as<String>()+"  ";
+  }
+
+  if(streamIsPlaying) {
+    if(title.length() > 0) {
+      display.println(title.substring(t_idx, t_idx+15).c_str());    
+      t_idx++;
+      if((t_idx+15) > title.length()) {
+        t_idx=0;
+      }
+    }
+    display.setCursor(4,24);  
+    display.println(env["stream_bitrate"].as<String>()+"brate");    
+   } else {
+    display.setCursor(2,24);  
+    if(streamIsPaused) {
+      display.println("*** PAUSE ***");    
+    } else {
+      display.println("Loading...");                  
+    }
+  }
+
+  // Draw volume bar
+  display.drawXBitmap(2, 38, audio_icon_bits, audio_icon_width, audio_icon_height, 0xff);
+  uint8_t volume=map(config.volume, 0, 22, 0, 72);
+  display.drawRect(10, 40, 72, 6, BLACK);
+  display.fillRect(10, 40, volume, 6, BLACK);
+  //
   
   display.display();
 }
 
 bool playStream(uint8_t stream_id) {
   if(getStreamURL(stream_id)) {
-    audio.connecttohost(config.stream_url);
+    streamIsPlaying = audio.connecttohost(config.stream_url);
     return true;
   } 
   DEBUG_PRINTLN("[AUDIO] No STREAM URL defined!");
@@ -384,10 +459,17 @@ bool playStream(uint8_t stream_id) {
 
 void audio_info(const char *info){
     String sinfo=String(info);
+    
     if(sinfo.startsWith("Bitrate=")) {
       env["stream_bitrate"] = sinfo.substring(8).toInt();
     } else if(sinfo.startsWith("StreamTitle=")) {
       env["stream_title"] = sinfo.substring(12,44); // Take only the first 32 chars (max)
+    } else if(sinfo.startsWith("Channels=")) {
+      env["stream_channels"] = sinfo.substring(8).toInt();
+    } else if(sinfo.startsWith("SampleRate=")) {
+      env["stream_samplerate"] = sinfo.substring(11).toInt();
+    } else if(sinfo.startsWith("BitsPerSample=")) {
+      env["stream_bitspersample"] = sinfo.substring(14).toInt();
     } else {
       DEBUG_PRINT("[AUDIO] "); DEBUG_PRINTLN(info);
     }
@@ -412,9 +494,11 @@ void togglePlay() {
   DEBUG_PRINT("[AUDIO] pauseResume(): ");
   if(streamIsPlaying) {
     DEBUG_PRINTLN("PLAY");
+    streamIsPaused = false;
     env["status"] = "Playing "+config.stream_id;
   } else {
     DEBUG_PRINTLN("PAUSE");
+    streamIsPaused = true;
     env["status"] = "Pause";
   }
 }
@@ -443,10 +527,10 @@ void checkButtons() {
       case 2: // BUTTONS 2 - Volume DOWN
         if(config.volume > MIN_VOLUME) {
           config.volume = config.volume-1;
-        }
+        }        
         break;
       case 3: // BUTTONS 1+2 - Play/Pause
-        togglePlay();
+        togglePlay();        
         break;
       case 4: // BUTTONS 3 - Next stream
         nextStream();
@@ -463,6 +547,8 @@ void checkButtons() {
   }
 }
 
+uint8_t tickCounter=0;
+
 void loop() {    
   if(config.ota_enable) {
     ArduinoOTA.handle();
@@ -475,10 +561,18 @@ void loop() {
       // Not connected? RETRY! 
       connectToWifi();
     }  
-    
+
     audio.setVolume(config.volume);     
     env["volume"] = config.volume;
+
+    tickCounter++;
+    if((tickCounter % 10)==0) {
+      if(!streamIsPlaying) {
+        playStream(config.stream_id);
+      }
+    }
+
     updateDisplay();
-    last = millis();
+    last = millis();    
   }
 }
