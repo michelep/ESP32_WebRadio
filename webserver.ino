@@ -74,26 +74,52 @@ void initWebServer() {
   server.on("/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
     ESP.restart();
   });
-    
+  
   server.on("/post", HTTP_POST, [](AsyncWebServerRequest *request) {
-    String message;
-    if(request->hasParam("wifi_essid", true)) {
-        strcpy(config.wifi_essid,request->getParam("wifi_essid", true)->value().c_str());
+    String action;
+    if(request->hasParam("action", true)) {
+      action = request->getParam("action", true)->value();
+      if(action.equals("config")) {
+        if(request->hasParam("wifi_essid", true)) {
+          strcpy(config.wifi_essid,request->getParam("wifi_essid", true)->value().c_str());
+        }
+        if(request->hasParam("wifi_password", true)) {
+          strcpy(config.wifi_password,request->getParam("wifi_password", true)->value().c_str());
+        }
+        if(request->hasParam("ntp_server", true)) {
+          strcpy(config.ntp_server, request->getParam("ntp_server", true)->value().c_str());
+        }
+        if(request->hasParam("ntp_timezone", true)) {
+          config.ntp_timezone = atoi(request->getParam("ntp_timezone", true)->value().c_str());
+        }
+        if(request->hasParam("stream_url", true)) {
+          strcpy(config.stream_url, request->getParam("stream_url", true)->value().c_str());
+          streamChanged=true;
+        }
+        saveConfigFile();    
+      } else if(action.equals("streams")) {
+        DynamicJsonDocument doc(512);
+        JsonArray streams = doc["streams"].to<JsonArray>();
+        // POST variable stream[] contains all streams
+        // {"action":"streams","stream[]":["http://stream.dancewave.online:8080/dance.mp3","http://mxsel.maksmedia.ru:8000/maksfm128","https://icecast.unitedradio.it/Radio105.mp3",""]}
+        int paramsNr = request->params();
+        // Iterate over all POST params...
+        for(int i=0;i<paramsNr;i++){
+          AsyncWebParameter* p = request->getParam(i);
+          if(p->name().equals("stream[]")) {
+            streams.add(p->value());  
+          }
+        }
+        // Save JSON to streams.json
+        File dbFile = SPIFFS.open(DB_FILE, "w");
+        if(!dbFile) {
+          DEBUG_PRINTLN("ERROR: Failed to create db file !");
+          return false;
+        }
+        serializeJson(doc,dbFile);
+        dbFile.close();
+      }
     }
-    if(request->hasParam("wifi_password", true)) {
-        strcpy(config.wifi_password,request->getParam("wifi_password", true)->value().c_str());
-    }
-    if(request->hasParam("ntp_server", true)) {
-        strcpy(config.ntp_server, request->getParam("ntp_server", true)->value().c_str());
-    }
-    if(request->hasParam("ntp_timezone", true)) {
-        config.ntp_timezone = atoi(request->getParam("ntp_timezone", true)->value().c_str());
-    }
-    if(request->hasParam("stream_url", true)) {
-        strcpy(config.stream_url, request->getParam("stream_url", true)->value().c_str());
-        streamChanged=true;
-    }
-    saveConfigFile();
     request->redirect("/?result=ok");
   });
   

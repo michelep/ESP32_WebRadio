@@ -43,12 +43,16 @@ using USB. I've choosed an USB B connector (i have some lying on the table...) a
 
 ## ChangeLog
 
-0.0.1 - 08.05.2020 
-  - First public release
+0.0.5 - 03.06.2020
+  - Better wifi icon
+  - Display now show more info about radio and songs
+  - Adding streams URL via Web now work 
+  - Minor bugs fixed
 
-0.0.2 - 09.05.2020
-  - Added streams.json with lists of stream URL to be played
-  - Some minon bugs fixed
+0.0.4 - 20.05.2020
+  - Better OTA handling 
+  - Display now show scrolling title and stream name, current time and wifi power in top bar, volume in bottom (WIP)
+  - Miscellaneous improvements and bug fixed
 
 0.0.3 - 14.05.2020
   - Some design changes, like 3 mechanical buttons (but you can use capacitive ones, if you want)
@@ -57,10 +61,12 @@ using USB. I've choosed an USB B connector (i have some lying on the table...) a
   - Lots of new features and bugs fixed
   - Other minor changes
 
-0.0.4 - 20.05.2020
-  - Better OTA handling 
-  - Display now show scrolling title and stream name, current time and wifi power in top bar, volume in bottom (WIP)
-  - Miscellaneous improvements and bug fixed
+0.0.2 - 09.05.2020
+  - Added streams.json with lists of stream URL to be played
+  - Some minon bugs fixed
+
+0.0.1 - 08.05.2020 
+  - First public release
 
 ## Other resources
 

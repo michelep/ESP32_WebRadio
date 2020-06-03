@@ -17,10 +17,16 @@
 //  - Lots of new features and bugs fixed
 //  - Other minor changes
 //
-// 0.0.4
+// 0.0.4 - 20.05.2020
 //  - Better OTA handling
-//  - Display now show scrolling title and stream name, current time and wifi power in top bar, volume in bottom (WIP)
-//  - Miscellaneous improvements and bug fixed
+//  - Display now show scrolling title and stream name, current time and wifi power in top bar
+//
+// 0.0.5 - 03.06.2020
+//  - Better wifi icon
+//  - Display now show more info about radio and songs
+//  - Adding streams URL via Web now work 
+//  - Minor bugs fixed
+//
       
 #define __DEBUG__
 //#define __NEOPIXEL__ // Uncomment if you plain to use one or more NeoPixel
@@ -28,7 +34,7 @@
 // Firmware data
 const char BUILD[] = __DATE__ " " __TIME__;
 #define FW_NAME         "esp32-webradio"
-#define FW_VERSION      "0.0.4"
+#define FW_VERSION      "0.0.5"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -58,15 +64,14 @@ const int BUTTONS_PINS[BUTTONS_NUM] = {34, 35, 32};
 // Icons
 #define audio_icon_width 5
 #define audio_icon_height 10
-
 static const uint8_t PROGMEM audio_icon_bits[] = {
    0x10, 0x18, 0x1c, 0x1f, 0x1f, 0x1f, 0x1f, 0x1c, 0x18, 0x10 };
 
-#define wifi_icon_width 15
-#define wifi_icon_height 10
+#define wifi_icon_width 8
+#define wifi_icon_height 8
 static const uint8_t PROGMEM wifi_icon_bits[] = {
-   0x40, 0x01, 0xf8, 0x0f, 0x3e, 0x3e, 0x0e, 0x38, 0xf2, 0x27, 0xf8, 0x0f,
-   0x18, 0x04, 0xc0, 0x01, 0xc0, 0x01, 0x80, 0x00 };
+  0x00, 0x1f, 0x20, 0x4e, 0x50, 0x56, 0x56, 0x40 };
+
 
 // LCD PCD8544 - NOKIA 5110
 #include <SPI.h>
@@ -378,14 +383,22 @@ String zeroPadding(int digit) {
   return String(digit);
 }
 
-uint8_t t_idx=0;
+uint8_t t_idx=0, d_cycle=0, d_cnt=0;
 
 void updateDisplay() {
+  d_cnt++;
+  if((d_cnt % 5)==0) {
+    d_cycle++;
+    if(d_cycle > 2) {
+      d_cycle=0;
+    }
+  }
+  
   // Graphic display of 84×48 pixels
   display.clearDisplay();
   display.setContrast(config.contrast);
 
-// If there's an OTA running...
+  // If there's an OTA running...
   if(deviceIsOTA) {
     display.setCursor(2,16);  
     display.println("Updating.Please wait!");       
@@ -426,8 +439,22 @@ void updateDisplay() {
         t_idx=0;
       }
     }
-    display.setCursor(4,24);  
-    display.println(env["stream_bitrate"].as<String>()+"brate");    
+    display.setCursor(2,24);  
+    display.println(env["stream_genre"].as<String>());    
+    display.setCursor(4,34);  
+    switch(d_cycle) {
+      case 0:
+        display.println(env["stream_bitrate"].as<String>()+" brate");    
+        break;
+      case 1:
+        display.println(env["stream_channels"].as<String>()+" chans");    
+        break;
+      case 2:
+        display.println(env["stream_bitspersample"].as<String>()+" bps");    
+        break;
+      default:
+        d_cycle=0;        
+    }
    } else {
     display.setCursor(2,24);  
     if(streamIsPaused) {
@@ -470,6 +497,8 @@ void audio_info(const char *info){
       env["stream_samplerate"] = sinfo.substring(11).toInt();
     } else if(sinfo.startsWith("BitsPerSample=")) {
       env["stream_bitspersample"] = sinfo.substring(14).toInt();
+    } else if(sinfo.startsWith("icy-genre:")) { // Get the stream genre, if present
+      env["stream_genre"] = sinfo.substring(10,24);
     } else {
       DEBUG_PRINT("[AUDIO] "); DEBUG_PRINTLN(info);
     }

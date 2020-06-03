@@ -91,7 +91,8 @@
 					<input type="text" class="form-control form-control-sm" id="colFormLabelSm_last" name="stream[]" value="">
 				    </div>
 				</div>
-				<input type="submit" class="btn btn-info" value="Save" />
+				<input type="submit" class="btn btn-info" value="Save" /> or <a href="/streams.json" class="btn btn-xs btn-info">Backup streams JSON</a>
+
 			    </form>
 			</div>
 		    </div>
@@ -198,12 +199,14 @@ function ajaxCall() {
 	dataType: 'json',
 	timeout : 2000,
     }).done(function(data) {
+	$('#status_field').removeClass("alert-warning").addClass("alert-info");
 	$('#status_field').html(data.status);
 	$('#stream_title').html(data.stream_title);
 	$('#stream_station').html(data.stream_station);
-	$('#stream_info').html("Bitrate: "+data.stream_bitrate);
+	$('#stream_info').html("Bitrate:"+data.stream_bitrate+" Samplerate:"+data.stream_samplerate);
     }).fail(function(xhr, text, error) {
-	$('#status_field').html('Timeout ('+error+'): is connected?');
+	$('#status_field').html('FAILED ('+error+'): is connected?');
+	$('#status_field').removeClass("alert-info").addClass("alert-warning");
     });
     setTimeout(ajaxCall, 5000);
 }
@@ -216,7 +219,7 @@ function ajaxSet(action, value) {
 	dataType: 'json',
 	timeout : 1000,
     }).fail(function(xhr, text, error) {
-	$('#status_field').html('Timeout ('+error+'): is connected?');
+	$('#status_field').html('FAILED ('+error+'): device is connected?');
     });
     return false;
 }
