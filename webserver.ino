@@ -19,7 +19,12 @@ String templateProcessor(const String& var)
     return String(millis()/1000);
   }
   if(var=="timedate") {
-    return String();
+    struct tm timeinfo;
+    if(!getLocalTime(&timeinfo)){
+      DEBUG_PRINTLN("Failed to obtain time");
+      return String("Error");
+    }
+    return String(String(timeinfo.tm_hour)+":"+String(timeinfo.tm_min)+":"+String(timeinfo.tm_sec));
   }
   if(var == "ota_enable") {
     if(config.ota_enable) {
