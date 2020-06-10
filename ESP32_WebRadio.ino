@@ -1,7 +1,9 @@
 //
 // ESP32 WebRadio
 // 
-// Compile with DOIT ESP32 WebKit v1
+// Released under GNU General Public License v3.0
+//
+// Compile with DOIT ESP32 WebKit v1 and burn /data directory into SPIFFS (1M)
 //
 // 0.0.1 - 08.05.2020 
 //  - First public release
