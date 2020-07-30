@@ -29,6 +29,8 @@
 //  - Adding streams URL via Web now work 
 //  - Minor bugs fixed
 //
+// 0.0.6 - 30.07.2020
+//  -  Just small remarks to fix some compiler errors
       
 #define __DEBUG__
 //#define __NEOPIXEL__ // Uncomment if you plain to use one or more NeoPixel
@@ -36,7 +38,7 @@
 // Firmware data
 const char BUILD[] = __DATE__ " " __TIME__;
 #define FW_NAME         "esp32-webradio"
-#define FW_VERSION      "0.0.5"
+#define FW_VERSION      "0.0.6"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -161,11 +163,19 @@ bool streamIsPlaying = false;
 bool deviceIsOTA = false;
 
 DynamicJsonDocument env(256);
+
+/*
+ * Esternal procedures definition
+ */
+bool loadConfigFile();
+void initWebServer();
+void printStreamsDB();
+bool getStreamURL(uint8_t);
   
 // ************************************
 // DEBUG_PRINT() and DEBUG_PRINTLN()
 //
-// send message via RSyslog (if enabled) or fallback on Serial 
+// send message to Serial 
 // ************************************
 void DEBUG_PRINT(String message) {
 #ifdef __DEBUG__

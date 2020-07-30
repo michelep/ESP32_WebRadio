@@ -43,6 +43,9 @@ using USB. I've choosed an USB B connector (i have some lying on the table...) a
 
 ## ChangeLog
 
+0.0.6 - 30.07.2020
+  -  Just small remarks to fix some compiler errors
+
 0.0.5 - 03.06.2020
   - Better wifi icon
   - Display now show more info about radio and songs
