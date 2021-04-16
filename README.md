@@ -1,7 +1,7 @@
 # ESP32_WebRadio
 An Internet web radio based to ESP32
 
-ESP32 connect to the Internet via WiFI (support WEP/WPA/WPA2), fetching MP3/AAC audio stream from your favourite webradios (mine is Dance Wave!). Then decode MP3 and send via I2S to DAC. The DAC simply output audio to a PAM8403 3W amplifier.
+ESP32 connect to the Internet via WiFI (support WEP/WPA/WPA2), fetching MP3/AAC/M4A audio stream from your favourites webradio (mine is Dance Wave!). Then decode MP3 and send via I2S to DAC. The DAC simply output audio to a PAM8403 3W amplifier.
 
 My grandpa made for me a fantastic wood case that sits perfectly on my book shelf in the linving room ;-)
 
@@ -42,6 +42,10 @@ using USB. I've choosed an USB B connector (i have some lying on the table...) a
 ![Schematic](https://raw.githubusercontent.com/michelep/ESP32_WebRadio/master/images/schematic.png)
 
 ## ChangeLog
+0.0.7 - 16.0.4.2021
+  -  Just some small fixes and a refresh for library dependencies. Tested with:
+     - ESP32-audioI2S (https://github.com/schreibfaul1/ESP32-audioI2S) 783f67c
+     - ESP32-Arduino (https://github.com/espressif/arduino-esp32) 1.0.6
 
 0.0.6 - 30.07.2020
   -  Just small remarks to fix some compiler errors
