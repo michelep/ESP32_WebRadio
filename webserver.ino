@@ -112,7 +112,9 @@ void initWebServer() {
         for(int i=0;i<paramsNr;i++){
           AsyncWebParameter* p = request->getParam(i);
           if(p->name().equals("stream[]")) {
-            streams.add(p->value());  
+            if(p->value().length() > 0) {
+              streams.add(p->value());  
+            }
           }
         }
         // Save JSON to streams.json

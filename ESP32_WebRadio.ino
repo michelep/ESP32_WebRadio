@@ -31,6 +31,11 @@
 //
 // 0.0.6 - 30.07.2020
 //  -  Just small remarks to fix some compiler errors
+//
+// 0.0.7 - 16.0.4.2021
+//  -  Just some small fixes and a refresh for library dependencies. Tested with:
+//     - ESP32-audioI2S (https://github.com/schreibfaul1/ESP32-audioI2S) 783f67c
+//     - ESP32-Arduino (https://github.com/espressif/arduino-esp32) 1.0.6
       
 #define __DEBUG__
 //#define __NEOPIXEL__ // Uncomment if you plain to use one or more NeoPixel
@@ -38,7 +43,7 @@
 // Firmware data
 const char BUILD[] = __DATE__ " " __TIME__;
 #define FW_NAME         "esp32-webradio"
-#define FW_VERSION      "0.0.6"
+#define FW_VERSION      "0.0.7"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -492,7 +497,7 @@ bool playStream(uint8_t stream_id) {
     return true;
   } 
   DEBUG_PRINTLN("[AUDIO] No STREAM URL defined!");
-  env["status"] = "No stream url defined!";  
+  env["status"] = "No stream URL defined at index "+stream_id;  
   return false;
 }
 
