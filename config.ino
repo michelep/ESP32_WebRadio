@@ -32,6 +32,7 @@ bool loadConfigFile() {
       strlcpy(config.hostname, root["hostname"] | "aiq-sensor", sizeof(config.hostname));
       strlcpy(config.ntp_server, root["ntp_server"] | "time.ien.it", sizeof(config.ntp_server));
       config.ntp_timezone = root["ntp_timezone"] | 1;
+      config.ntp_daylightOffset = root["ntp_timezone"] | 1;
       config.stream_id = root["stream_id"] | 0;
       config.volume = root["volume"] | 20;
       config.contrast = root["contrast"] | 50;
