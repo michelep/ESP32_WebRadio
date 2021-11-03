@@ -140,6 +140,7 @@ struct Config {
   // NTP Config
   char ntp_server[16];
   int8_t ntp_timezone;
+  int8_t ntp_daylightOffset;
   // Host config
   char hostname[16];
   bool ota_enable;
@@ -221,7 +222,7 @@ bool connectToWifi() {
         MDNS.addService("http", "tcp", 80);
       }
       
-      configTime(config.ntp_timezone * 3600, config.ntp_timezone * 3600, config.ntp_server);
+      configTime(config.ntp_timezone * 3600, config.ntp_daylightOffset * 3600, config.ntp_server);
       
       return true;  
     } else {
